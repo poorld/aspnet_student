@@ -17,7 +17,7 @@ namespace Student.Service
 
         public void updatePassword(AdminEntity admin)
         {
-            base.update(admin);
+            base.updateByPrimarykey(admin);
         }
 
         protected override int initId()

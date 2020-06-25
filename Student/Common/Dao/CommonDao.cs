@@ -34,7 +34,7 @@ using System.Threading.Tasks;
 namespace Assets.Common.Dao
 {
 
-    public abstract class CommonDao <T> where T : TableEntity,new()
+    public abstract class CommonDao<T> where T : TableEntity, new()
     {
 
         public CommonDao()
@@ -174,7 +174,7 @@ namespace Assets.Common.Dao
                         setPrimaryKey(fieldName);
                         return;
                     }
-                        
+
 
                 }
             }
@@ -187,39 +187,39 @@ namespace Assets.Common.Dao
         /// </summary>
         private Dictionary<String, Object> getAttributeFieldByPropertyName(string pName)
         {
-            Dictionary<String,Object> d = new Dictionary<String,Object>();
+            Dictionary<String, Object> d = new Dictionary<String, Object>();
 
-             PropertyInfo[] peroperties = typeof(T).GetProperties();//BindingFlags.Public | BindingFlags.Instance
+            PropertyInfo[] peroperties = typeof(T).GetProperties();//BindingFlags.Public | BindingFlags.Instance
 
-             foreach (PropertyInfo property in peroperties)
-             {
-                 object[] objs = property.GetCustomAttributes(typeof(TableFieldAttribute), true);
-                 if (objs.Length > 0)
-                 {
-                     Console.WriteLine("{0}: {1}", property.Name, ((TableFieldAttribute)objs[0]).FieldName);
-                     //属性名 BrandId
-                     string propertyName = property.Name;
+            foreach (PropertyInfo property in peroperties)
+            {
+                object[] objs = property.GetCustomAttributes(typeof(TableFieldAttribute), true);
+                if (objs.Length > 0)
+                {
+                    Console.WriteLine("{0}: {1}", property.Name, ((TableFieldAttribute)objs[0]).FieldName);
+                    //属性名 BrandId
+                    string propertyName = property.Name;
 
-                     if (!propertyName.Equals(pName))
-                         continue;
+                    if (!propertyName.Equals(pName))
+                        continue;
 
-                     d.Add("propertyName", propertyName);
+                    d.Add("propertyName", propertyName);
 
-                     //表字段名 brand_id
-                     string fieldName = ((TableFieldAttribute)objs[0]).FieldName;
-                     d.Add("fieldName", fieldName);
+                    //表字段名 brand_id
+                    string fieldName = ((TableFieldAttribute)objs[0]).FieldName;
+                    d.Add("fieldName", fieldName);
 
-                     //表类型 int varchar...
-                     string fieldType = ((TableFieldAttribute)objs[0]).FieldType;
-                     d.Add("fieldType", fieldType);
+                    //表类型 int varchar...
+                    string fieldType = ((TableFieldAttribute)objs[0]).FieldType;
+                    d.Add("fieldType", fieldType);
 
-                     //主键 true false
-                     bool primaryKey = ((TableFieldAttribute)objs[0]).PrimaryKey;
-                     d.Add("primaryKey", primaryKey);
-                 }
-             }
+                    //主键 true false
+                    bool primaryKey = ((TableFieldAttribute)objs[0]).PrimaryKey;
+                    d.Add("primaryKey", primaryKey);
+                }
+            }
 
-             return d;
+            return d;
         }
 
         /// <summary>
@@ -256,7 +256,7 @@ namespace Assets.Common.Dao
             return list;
         }
 
-       
+
 
         /// <summary>
         /// SqlDataReader
@@ -538,12 +538,12 @@ namespace Assets.Common.Dao
                             bool primaryKey = ((TableFieldAttribute)fieldObjs[0]).PrimaryKey;
                             if (primaryKey)
                             {
-                                if(p.GetValue(t) == null)
+                                if (p.GetValue(t) == null)
                                 {
                                     int id = getLastId() + 1;
                                     p.SetValue(t, id);
                                 }
-                                
+
                             }
                         }
 
@@ -627,7 +627,7 @@ namespace Assets.Common.Dao
                                 primaryKeyValue = p.GetValue(t);
                                 continue;
                             }
-                            
+
                         }
 
                         updateCmd += field + "=@" + field + ",";
@@ -691,8 +691,6 @@ namespace Assets.Common.Dao
         }
 
         /// <summary>
-<<<<<<< HEAD
-=======
         /// 更新实体类(by id)
         /// </summary>
         /// <param name="t"></param>
@@ -791,6 +789,7 @@ namespace Assets.Common.Dao
                         }
                         else
                         {
+                            //包括主键
                             com.Parameters.Add(new SqlParameter("@" + field, p.GetValue(t)));
                         }
 
@@ -798,9 +797,6 @@ namespace Assets.Common.Dao
 
                 }
             }
-
-            //主键
-            com.Parameters.Add(new SqlParameter("@" + primaryKeyName, primaryKeyValue));
 
             com.CommandText = updateCmd;
             com.Connection = conn;
@@ -812,7 +808,6 @@ namespace Assets.Common.Dao
         }
 
         /// <summary>
->>>>>>> 821bfd6... 更新
         /// 根据主键id删除
         /// </summary>
         /// <param name="id"></param>
@@ -845,7 +840,7 @@ namespace Assets.Common.Dao
 
             //返回个子类实现的方法获取id
             return initId();
-            
+
         }
 
         /// <summary>
@@ -1011,7 +1006,7 @@ namespace Assets.Common.Dao
 
                 if (fieldObjs.Length > 0)
                 {
-                    //主键 true false
+                    //获取表字段
                     field = ((TableFieldAttribute)fieldObjs[0]).FieldName;
 
                 }
@@ -1054,9 +1049,68 @@ namespace Assets.Common.Dao
 
         }
 
+
+        /// <summary>
+        /// by teenyda
+        /// 遍历对象的属性，获取特性值
+        /// TableFieldAttribute、EnumFieldAttribute
+        /// </summary>
+        /// <param name="t"></param>
+        /// <param name="iTake"></param>
+        private void foreachAttribute(T t, ITakeAttribute iTake)
+        {
+
+            if (iTake == null)
+                throw new Exception("ITakeAttribute对象为空，请检查");
+
+            //遍历p的属性
+            foreach (System.Reflection.PropertyInfo p in t.GetType().GetProperties())
+            {
+                iTake.onTakeAttribute(p);
+
+                object[] tableObjs = p.GetCustomAttributes(typeof(TableFieldAttribute), true);
+                //表字段特性
+                if (tableObjs.Length > 0)
+                {
+                    TableFieldAttribute tableField = (TableFieldAttribute)tableObjs[0];
+                    iTake.onTakeTableFieldAttribute(tableField);
+
+                    if (tableField.PrimaryKey && p.GetValue(t) != null)
+                    {
+                        iTake.onTakePrimaryKey(tableField.FieldName, p.GetValue(t));
+                    }
+                }
+
+                object[] enumObjs = p.GetCustomAttributes(typeof(EnumFieldAttribute), true);
+                //枚举特性
+                if (enumObjs.Length > 0)
+                {
+                    iTake.onTakeEnumFieldAttribute((EnumFieldAttribute)enumObjs[0]);
+                }
+            }
+
+        }
+
     }
 
+    interface ITakeAttribute
+    {
+        //当获取属性时
+        void onTakeAttribute(System.Reflection.PropertyInfo p);
 
+        //当获取到主键时
+        void onTakePrimaryKey(string primaryKeyName, object primaryKeyValue);
+
+        //当获取到TableFieldAttribute
+        void onTakeTableFieldAttribute(TableFieldAttribute tableField);
+
+        //当获取到枚举特性EnumFieldAttribute
+        void onTakeEnumFieldAttribute(EnumFieldAttribute enumField);
+
+    }
+
+    //get属性值
+    //set属性值
     
 
 }
